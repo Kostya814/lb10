@@ -226,6 +226,7 @@ public class NatureFragment extends Fragment {
                         int idAddress = (int)db.addressesDao().insert(addresses);
                         int idLake = (int)db.lakesDao().insert(new Lakes(etName.getText().toString(),idAddress));
                         Nature nature = new Nature(1,idLake);
+                        db.natureDao().insert(nature);
                         natures.add(nature);
                         adapter.notifyDataSetChanged();
                     }
