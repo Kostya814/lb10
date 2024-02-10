@@ -2,6 +2,7 @@ package com.example.roomdatabase.adapters;
 
 import android.app.Activity;
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -31,6 +32,7 @@ public class MyAdapter extends ArrayAdapter<Nature> {
         this.layout = resource;
         this.inflater = LayoutInflater.from(context);
         this.activity = activity;
+        //Log.d("RESULT", String.valueOf(this.states.equals(states)));
     }
     public View getView(int position, View convertView, ViewGroup parent) {
 
@@ -68,6 +70,10 @@ public class MyAdapter extends ArrayAdapter<Nature> {
         });
         th.start();
         return view;
+    }
+    public void removeItem(Nature nature){
+        states.remove(nature);
+        notifyDataSetChanged();
     }
     public Nature getNatureByPosition(int position )
     {

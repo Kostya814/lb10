@@ -5,6 +5,9 @@ import android.app.Dialog;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModel;
+import androidx.lifecycle.ViewModelProvider;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -17,6 +20,7 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
 
+import com.example.roomdatabase.ViewModel.SheredViewModel;
 import com.example.roomdatabase.adapters.AdapterCountries;
 import com.example.roomdatabase.adapters.AdapterRegion;
 import com.example.roomdatabase.adapters.MyAdapter;
@@ -48,8 +52,9 @@ public class NatureFragment extends Fragment {
     private String mParam2;
     private Database db;
 
+    private SheredViewModel sheredViewModel;
     private List<Nature> natures;
-
+    MyAdapter adapter;
     public NatureFragment() {
         // Required empty public constructor
     }
@@ -93,28 +98,36 @@ public class NatureFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         Button createBtn = view.findViewById(R.id.createBtn);
 
-        ListView lw = view.findViewById(R.id.lw);
-        Runnable search=()->{
-            db = Database.getDatabase(getContext());
-            /*db.regionsDao().insert(new Regions("Иркутская область"));
-            db. countriesDao().insert(new Countries("Россия"));
-            db.addressesDao().insert(new Addresses(2,2));
-            db.typesFishDao().insert(new TypesFish("Озерные"));
-            db.lakesDao().insert(new Lakes("Байкал", 2));
-            db.fishesDao().insert(new Fishes("Окунь",1));
-            db.natureDao().insert(new Nature(1,2));*/
-            natures = db.natureDao().getAllNatures();
-            MyAdapter adapter = new MyAdapter(getContext(),R.layout.list_item, natures,getActivity());
-            getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    lw.setAdapter(adapter);
-                }
-            });
-};
+        db = Database.getDatabase(getContext());
 
-        Thread treadbd = new Thread(search);
-        treadbd.start();
+        sheredViewModel = new ViewModelProvider(getActivity()).get(SheredViewModel.class);
+        sheredViewModel.loadNaturesFromDatabase();
+        ListView lw = view.findViewById(R.id.lw);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                natures = db.natureDao().getAllNatures();
+                adapter = new MyAdapter(getContext(),R.layout.list_item, natures,getActivity());
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        lw.setAdapter(adapter);
+                    }
+                });
+
+            }
+        }).start();
+
+        sheredViewModel.getNature().observe(getViewLifecycleOwner(), new Observer<List<Nature>>() {
+            @Override //При изменении
+            public void onChanged(List<Nature> nature) {
+                natures = nature;
+                adapter = new MyAdapter(getContext(),R.layout.list_item, natures,getActivity());
+                lw.setAdapter(adapter);
+            }
+        });
+
+
         createBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -130,16 +143,14 @@ public class NatureFragment extends Fragment {
         AdapterView.OnItemLongClickListener listener = new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                MyAdapter adapter =  (MyAdapter)lw.getAdapter();
+                //MyAdapter adapter =  (MyAdapter)lw.getAdapter();
 
                 Nature mature =  adapter.getNatureByPosition(position);
-                natures.remove(mature);
-                adapter.notifyDataSetChanged();
                 Thread th = new Thread(new Runnable() {
                     @Override
                     public void run() {
                         db.natureDao().delete(mature);
-
+                        sheredViewModel.loadNaturesFromDatabase();
                     }
                 });
                 th.start();
@@ -177,7 +188,7 @@ public class NatureFragment extends Fragment {
                     }
                 });
                 th.start();
-                adapter.notifyDataSetChanged();
+                sheredViewModel.loadNaturesFromDatabase();
                 dialog.dismiss();
             }
         });
@@ -227,12 +238,12 @@ public class NatureFragment extends Fragment {
                         int idLake = (int)db.lakesDao().insert(new Lakes(etName.getText().toString(),idAddress));
                         Nature nature = new Nature(1,idLake);
                         db.natureDao().insert(nature);
-                        natures.add(nature);
-                        adapter.notifyDataSetChanged();
+                        sheredViewModel.loadNaturesFromDatabase();
+
                     }
                 });
                 th.start();
-                adapter.notifyDataSetChanged();
+                sheredViewModel.loadNaturesFromDatabase();
                 dialog.dismiss();
             }
         });
@@ -240,7 +251,6 @@ public class NatureFragment extends Fragment {
         btncn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 dialog.dismiss();
             }
         });
